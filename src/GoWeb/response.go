@@ -1,9 +1,9 @@
-package userinterface
+package main
 
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
+	"io"
 )
 
 type ResponseEntity struct {
@@ -15,25 +15,34 @@ type ResponseEntity struct {
 const SUCCESS string = "000"
 const FAIL string = "001"
 const INVALID_USER = "002"
+const INVALID_PARAM = "005"
+const UNKNOW_ERROR = "500"
 
-func success() ResponseEntity {
+const SUCCESS_MESSAGE = "操作成功"
+const FAIL_MESSAGE = "操作失败"
+const INVALID_USER_MESSAGE = "非法用户"
+const UNKNOW_ERROR_MESSAGE = "未知错误"
+
+func success(message string, data interface{}) ResponseEntity {
 	return ResponseEntity{
 		Code:    SUCCESS,
-		Message: "操作成功",
+		Message: message,
+		Data:    data,
 	}
 }
 
-func fail() ResponseEntity {
+func fail(message string, data interface{}) ResponseEntity {
 	return ResponseEntity{
 		Code:    FAIL,
-		Message: "操作失败",
+		Message: message,
+		Data:    data,
 	}
 }
 
-func invalid() ResponseEntity {
+func invalidUser() ResponseEntity {
 	return ResponseEntity{
 		Code:    INVALID_USER,
-		Message: "非法用户",
+		Message: INVALID_USER_MESSAGE,
 	}
 }
 
@@ -52,7 +61,15 @@ func data(code string, message string, data interface{}) ResponseEntity {
 	}
 }
 
-func (entity ResponseEntity) write(writer http.ResponseWriter) {
+func defaultData(data interface{}) ResponseEntity {
+	return ResponseEntity{
+		Code:    SUCCESS,
+		Message: "操作成功",
+		Data:    data,
+	}
+}
+
+func (entity ResponseEntity) write(writer io.Writer) {
 	jsonObj, _ := json.Marshal(entity)
 	fmt.Fprintf(writer, string(jsonObj))
 }
