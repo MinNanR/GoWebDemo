@@ -69,7 +69,7 @@ func defaultData(data interface{}) ResponseEntity {
 	}
 }
 
-func (entity ResponseEntity) write(writer io.Writer) {
+func (entity ResponseEntity) export(writer io.Writer) {
 	jsonObj, _ := json.Marshal(entity)
 	fmt.Fprintf(writer, string(jsonObj))
 }

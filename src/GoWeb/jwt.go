@@ -35,7 +35,7 @@ func generateJwtToken(user AuthUser) string {
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
 	tokenString, _ := token.SignedString([]byte("min107"))
-	return "Bearer " + tokenString
+	return tokenString
 }
 
 func validateJwtToken(tokenString string, claims *CustomClaims) error {
@@ -50,5 +50,4 @@ func validateJwtToken(tokenString string, claims *CustomClaims) error {
 		return err
 	}
 	return nil
-
 }

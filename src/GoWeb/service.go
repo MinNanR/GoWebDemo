@@ -17,9 +17,13 @@ func validateUser(dto LoginPram) (AuthUser, error) {
 }
 
 func loadUserByUserName(username string) (AuthUser, error) {
-	user, err := GetUserByUsername(username)
+	user, err := SelectUserByUsername(username)
 	if err != nil {
 		return AuthUser{}, LoginError{message: "用户不存在"}
 	}
 	return user, nil
+}
+
+func getLinkList() ([]LinkInformation, error) {
+	return SelectAllLink()
 }

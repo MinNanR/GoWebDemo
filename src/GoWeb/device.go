@@ -90,7 +90,7 @@ func getDevice(request http.Request) (string, string) {
 	}
 
 	accept := header.Get("Accept")
-	if len(accept) > 0 {
+	if len(accept) > 0 && strings.Contains(accept, "wap") {
 		return MOBILE_TYPE, UNKNOWN_PLATFORM
 	}
 

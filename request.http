@@ -11,6 +11,6 @@ Content-Type: application/json
 ###
 POST {{baseUrl}}/api/getAllLinkList
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJTdWJqZWN0IjoibWluIiwiSWQiOjYsIkV4cGlyZXNBdCI6MTYxODkxMzk3Mjg0NSwiSXNzdWVkQXQiOjE2MTg4Mjc1NzI4NDV9.TJWIxttIgWkRqMNlr8_UK_47MZ7OXJXe2sE86M_JHZg2wRUDT4fJAoKP9_XjkCBDj_C2drMew2Bz6sP0O5s4ow
+Authorization: {{admin_token}}
 
 {}
