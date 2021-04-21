@@ -40,6 +40,13 @@ func login(ctx *HttpContext) ResponseEntity {
 	return responseEntity
 }
 
+func getUserInformation(ctx *HttpContext) ResponseEntity {
+	user := ctx.Principal
+	user.Password = ""
+	responseEntity := data(SUCCESS, SUCCESS_MESSAGE, user)
+	return responseEntity
+}
+
 func getAllLinkList(context *HttpContext) ResponseEntity {
 	linkList, err := getLinkList()
 	if err != nil {

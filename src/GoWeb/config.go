@@ -24,13 +24,17 @@ var dataSource = DataSource{
 	DriverName: "mysql",
 }
 
-var filterList = make([]func(*HttpContext, *FilterChain), 0)
+var filterMethodList = make([]func(*HttpContext, *Filter), 0)
 
-func createFilterChain() FilterChain {
-	return FilterChain{
-		chain:      filterList,
-		chainIndex: -1,
+func createFilterChain() *Filter {
+	chain := new(Filter)
+	current := chain
+	for _, filterMethod := range filterMethodList {
+		newFilter := &Filter{filterMethod: filterMethod, next: nil}
+		current.addFilterAt(newFilter)
+		current = current.next
 	}
+	return chain
 }
 
 var authorityPath = []string{"/login"}

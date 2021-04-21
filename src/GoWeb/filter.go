@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"regexp"
@@ -10,15 +9,19 @@ import (
 	"time"
 )
 
-type FilterChain struct {
-	chain      []func(*HttpContext, *FilterChain)
-	chainIndex int
+type Filter struct {
+	filterMethod func(*HttpContext, *Filter)
+	next         *Filter
 }
 
-func (filterChain *FilterChain) doFilter(ctx *HttpContext) {
-	chainLength := len(filterChain.chain)
-	filterChain.chainIndex++
-	if filterChain.chainIndex == chainLength {
+//type FilterChain struct {
+//	chain      []func(*HttpContext, *FilterChain)
+//	chainIndex int
+//}
+type FilterChain Filter
+
+func (filter *Filter) doFilter(ctx *HttpContext) {
+	if filter == nil {
 		if ctx.targetFunction == nil {
 			fallBack(ctx)
 		} else {
@@ -26,8 +29,13 @@ func (filterChain *FilterChain) doFilter(ctx *HttpContext) {
 			ctx.responseEntity = responseEntity
 		}
 	} else {
-		filterChain.chain[filterChain.chainIndex](ctx, filterChain)
+		filter.filterMethod(ctx, filter.next)
 	}
+}
+
+func (filter *Filter) addFilterAt(nextFilter *Filter) {
+	nextFilter.next = filter.next
+	filter.next = nextFilter
 }
 
 func getBody(request *http.Request) []byte {
@@ -46,24 +54,25 @@ func buildRoutine() {
 	router = make(map[string]func(*HttpContext) ResponseEntity)
 	router["/login"] = login
 	router["/api/getAllLinkList"] = getAllLinkList
+	router["/api/getUserInformation"] = getUserInformation
 	for key, _ := range router {
 		log.Printf("Mapped url %s\n", key)
 	}
 }
 
 func buildFilter() {
-	filterList = append(filterList, UrlFilter)
-	filterList = append(filterList, ParamFilter)
-	filterList = append(filterList, UserFilter)
-	filterList = append(filterList, AuthorityFilter)
-	filterList = append(filterList, LogFilter)
-	filterList = append(filterList, ResponseFilter)
+	filterMethodList = append(filterMethodList, UrlFilter)
+	filterMethodList = append(filterMethodList, ParamFilter)
+	filterMethodList = append(filterMethodList, UserFilter)
+	filterMethodList = append(filterMethodList, AuthorityFilter)
+	filterMethodList = append(filterMethodList, LogFilter)
+	filterMethodList = append(filterMethodList, ResponseFilter)
 }
 
 /*
 路径过滤器，负责寻找路径对应的处理函数
 */
-func UrlFilter(ctx *HttpContext, filterChain *FilterChain) {
+func UrlFilter(ctx *HttpContext, filterChain *Filter) {
 	if len(router) == 0 {
 		buildRoutine()
 	}
@@ -81,13 +90,10 @@ func UrlFilter(ctx *HttpContext, filterChain *FilterChain) {
 /*
 参数解析过滤器
 */
-func ParamFilter(ctx *HttpContext, filterChain *FilterChain) {
+func ParamFilter(ctx *HttpContext, filterChain *Filter) {
 	request := ctx.request
 	requestMethod := request.Method
 	contentType := request.Header.Get("Content-Type")
-	for key, value := range request.Header {
-		fmt.Printf("%s:%s\n", key, value)
-	}
 	if strings.ToUpper(requestMethod) == "POST" && contentType == "application/json" {
 		ctx.paramByte = getBody(request)
 	} else {
@@ -112,7 +118,7 @@ func isAuthorityPath(url string) bool {
 /*
 用户解析过滤器
 */
-func UserFilter(ctx *HttpContext, filterChain *FilterChain) {
+func UserFilter(ctx *HttpContext, filterChain *Filter) {
 	isAuthorityPath := isAuthorityPath(ctx.url)
 	if !isAuthorityPath {
 		user, err := parseUser(ctx.request)
@@ -133,14 +139,14 @@ func UserFilter(ctx *HttpContext, filterChain *FilterChain) {
 /*
 权限校验，后续补充
 */
-func AuthorityFilter(ctx *HttpContext, filterChain *FilterChain) {
+func AuthorityFilter(ctx *HttpContext, filterChain *Filter) {
 	filterChain.doFilter(ctx)
 }
 
 /*
 日志过滤器
 */
-func LogFilter(ctx *HttpContext, filterChain *FilterChain) {
+func LogFilter(ctx *HttpContext, filterChain *Filter) {
 	request := ctx.request
 	startTime := time.Now().UnixNano() / 1e6
 	log.Printf("处理接口地址：%s,请求参数[%s]", request.RequestURI, re.ReplaceAllString(string(ctx.paramByte), ""))
@@ -154,7 +160,7 @@ func LogFilter(ctx *HttpContext, filterChain *FilterChain) {
 /*
 返回值过滤器
 */
-func ResponseFilter(ctx *HttpContext, filterChain *FilterChain) {
+func ResponseFilter(ctx *HttpContext, filterChain *Filter) {
 	filterChain.doFilter(ctx)
 	accept := ctx.request.Header.Get("Accept")
 	responseEntity := ctx.responseEntity

@@ -40,7 +40,11 @@ func dispatch(response http.ResponseWriter, request *http.Request) {
 		isAuthorized: false,
 	}
 	filterChain := createFilterChain()
-	filterChain.doFilter(&context)
+	if filterChain.next != nil {
+		filterChain.next.filterMethod(&context, filterChain.next.next)
+	} else {
+		response.WriteHeader(404)
+	}
 }
 
 /*
