@@ -17,7 +17,10 @@ func db() *sql.DB {
 
 var conn = db()
 
-func SelectUserByUsername(username string) (AuthUser, error) {
+type UserDB struct {
+}
+
+func (userDb UserDB) SelectUserByUsername(username string) (AuthUser, error) {
 	var authUser AuthUser
 	err := conn.QueryRow("select id id, username username, password password, "+
 		"nick_name nickName, role role from user where username = ?",
@@ -28,7 +31,37 @@ func SelectUserByUsername(username string) (AuthUser, error) {
 	return authUser, nil
 }
 
-func SelectAllLink() ([]LinkInformation, error) {
+func (userDb UserDB) insert(user AuthUser) error {
+	stmt, err := conn.Prepare("insert into user(username, password, nick_name, role) value (?, ?, ?, ?)")
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(user.Username, user.Password, user.NickName, user.Role)
+	return err
+}
+
+func (userDb UserDB) updateUser(user AuthUser) error {
+	stmt, err := conn.Prepare("update user set password = ?, nick_name = ? where id = ?")
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(user.Password, user.NickName, user.Id)
+	return err
+}
+func (userDb UserDB) SelectById(id int) (AuthUser, error) {
+	var user AuthUser
+	err := conn.QueryRow("select (id, username, password, nick_name, role) from user where id = ?", id).Scan(&user.Id,
+		&user.Username, &user.NickName, &user.Role)
+	if err != nil {
+		return user, err
+	}
+	return user, nil
+}
+
+type LinkDB struct {
+}
+
+func (linkDB LinkDB) SelectAllLink() ([]LinkInformation, error) {
 	rows, err := conn.Query("select id id,name name, link link, update_time updateTime from link")
 	if err != nil {
 		return nil, err

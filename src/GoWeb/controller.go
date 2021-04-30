@@ -1,12 +1,19 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"golang.org/x/crypto/bcrypt"
+)
 
-func login(ctx *HttpContext) ResponseEntity {
+type UserController struct {
+	UserService UserService
+}
+
+func (controller UserController) login(ctx *HttpContext) ResponseEntity {
 	param := LoginPram{}
 	paramPtr := interface{}(&param)
 	ctx.getParam(&paramPtr)
-	user, err := validateUser(param)
+	user, err := controller.UserService.validateUser(param)
 	if err != nil {
 		responseEntity := message(INVALID_USER, err.Error())
 		return responseEntity
@@ -40,15 +47,41 @@ func login(ctx *HttpContext) ResponseEntity {
 	return responseEntity
 }
 
-func getUserInformation(ctx *HttpContext) ResponseEntity {
+func (controller UserController) validateUser(ctx *HttpContext) ResponseEntity {
+	user := ctx.Principal
+	var param ValidateUserParam
+	paramPtr := interface{}(&param)
+	ctx.getParam(&paramPtr)
+	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(param.Password))
+	result := err != nil
+	responseEntity := success("", result)
+	return responseEntity
+}
+
+func (controller UserController) getUserInformation(ctx *HttpContext) ResponseEntity {
 	user := ctx.Principal
 	user.Password = ""
 	responseEntity := data(SUCCESS, SUCCESS_MESSAGE, user)
 	return responseEntity
 }
 
-func getAllLinkList(context *HttpContext) ResponseEntity {
-	linkList, err := getLinkList()
+func (controller UserController) createUser(ctx *HttpContext) ResponseEntity {
+	param := AddUserParam{}
+	paramPtr := interface{}(&param)
+	ctx.getParam(&paramPtr)
+	err := controller.UserService.addUser(param)
+	if err != nil {
+		return message(FAIL, err.Error())
+	}
+	return message(SUCCESS, SUCCESS_MESSAGE)
+}
+
+type LinkController struct {
+	linkService LinkService
+}
+
+func (controller LinkController) getAllLinkList(context *HttpContext) ResponseEntity {
+	linkList, err := controller.linkService.getLinkList()
 	if err != nil {
 		return message(FAIL, "查询失败")
 	}

@@ -6,7 +6,16 @@ Content-Type: application/json
   "password": "minnan35"
 }
 
-> {% client.global.set("admin_token", response.body.data.jwtToken); %}
+> {% client.global.set("admin_token", "Bearer " + response.body.data.jwtToken); %}
+
+###
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "username":"aaa",
+  "password": "min107"
+}
 
 ###
 POST {{baseUrl}}/api/getAllLinkList
@@ -14,3 +23,14 @@ Content-Type: application/json
 Authorization: {{admin_token}}
 
 {}
+
+###
+POST {{baseUrl}}/manager/createUser
+Content-Type: application/json
+Authorization: {{admin_token}}
+
+{
+  "username": "aaa",
+  "password": "min107",
+  "nickName": "123"
+}

@@ -52,9 +52,13 @@ var re, _ = regexp.Compile(`\s`)
 */
 func buildRoutine() {
 	router = make(map[string]func(*HttpContext) ResponseEntity)
-	router["/login"] = login
-	router["/api/getAllLinkList"] = getAllLinkList
-	router["/api/getUserInformation"] = getUserInformation
+	userController := UserController{}
+	linkController := LinkController{}
+	router["/login"] = userController.login
+	router["/api/getUserInformation"] = userController.getUserInformation
+	router["/api/validateUser"] = userController.validateUser
+	router["/api/getAllLinkList"] = linkController.getAllLinkList
+	router["/manager/createUser"] = userController.createUser
 	for key, _ := range router {
 		log.Printf("Mapped url %s\n", key)
 	}
@@ -183,11 +187,12 @@ func parseUser(request *http.Request) (AuthUser, error) {
 		return AuthUser{}, JwtError{message: "无法识别用户信息"}
 	}
 	claims := CustomClaims{}
+	service := UserService{}
 	err := validateJwtToken(strings.Replace(tokenString, "Bearer ", "", 1), &claims)
 	if err != nil {
 		return AuthUser{}, err
 	}
-	user, err := loadUserByUserName(claims.Subject)
+	user, err := service.loadUserByUserName(claims.Subject)
 	if err != nil {
 		return AuthUser{}, err
 	}
