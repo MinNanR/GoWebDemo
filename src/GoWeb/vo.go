@@ -6,6 +6,11 @@ type LoginVO struct {
 	Router      []string `json:"router"`
 }
 
+type DownloadToolsVO struct {
+	DownloadUrl string `json:"downloadUrl"`
+	FileName    string `json:"fileName"`
+}
+
 //type RouterList []string
 //
 //func (rl RouterList) MarshalJSON() ([]byte, error) {

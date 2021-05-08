@@ -52,3 +52,13 @@ var redisConfig = Redis{
 	Database: 5,
 	Password: "minnan",
 }
+
+type Aliyun struct {
+	baseUrl    string
+	bucketName string
+}
+
+var aliyunConfig = Aliyun{
+	baseUrl:    "http://minnan.site:2000",
+	bucketName: "link-server",
+}

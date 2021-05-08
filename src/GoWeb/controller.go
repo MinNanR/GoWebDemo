@@ -53,7 +53,7 @@ func (controller UserController) validateUser(ctx *HttpContext) ResponseEntity {
 	paramPtr := interface{}(&param)
 	ctx.getParam(&paramPtr)
 	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(param.Password))
-	result := err != nil
+	result := err == nil
 	responseEntity := success("", result)
 	return responseEntity
 }
@@ -65,11 +65,41 @@ func (controller UserController) getUserInformation(ctx *HttpContext) ResponseEn
 	return responseEntity
 }
 
+func (controller UserController) getUserInformationList(ctx *HttpContext) ResponseEntity {
+	userList, err := controller.UserService.getUserInformationList()
+	if err != nil {
+		return message(FAIL, err.Error())
+	}
+	return data(SUCCESS, SUCCESS_MESSAGE, userList)
+}
+
 func (controller UserController) createUser(ctx *HttpContext) ResponseEntity {
 	param := AddUserParam{}
 	paramPtr := interface{}(&param)
 	ctx.getParam(&paramPtr)
 	err := controller.UserService.addUser(param)
+	if err != nil {
+		return message(FAIL, err.Error())
+	}
+	return message(SUCCESS, SUCCESS_MESSAGE)
+}
+
+func (controller UserController) updateUser(ctx *HttpContext) ResponseEntity {
+	param := UpdateUserParam{}
+	paramStr := interface{}(&param)
+	ctx.getParam(&paramStr)
+	err := controller.UserService.updateUser(param)
+	if err != nil {
+		return message(FAIL, err.Error())
+	}
+	return message(SUCCESS, SUCCESS_MESSAGE)
+}
+
+func (controller UserController) deleteUser(ctx *HttpContext) ResponseEntity {
+	param := DeleteUserParam{}
+	paramStr := interface{}(&param)
+	ctx.getParam(&paramStr)
+	err := controller.UserService.deleteUser(param.Id)
 	if err != nil {
 		return message(FAIL, err.Error())
 	}
@@ -86,4 +116,99 @@ func (controller LinkController) getAllLinkList(context *HttpContext) ResponseEn
 		return message(FAIL, "查询失败")
 	}
 	return success(SUCCESS_MESSAGE, linkList)
+}
+
+func (controller LinkController) addLink(ctx *HttpContext) ResponseEntity {
+	param := AddLinkParam{}
+	paramStr := interface{}(&param)
+	ctx.getParam(&paramStr)
+	if len(param.Link) == 0 || len(param.Name) == 0 {
+		return fail(INVALID_PARAM, "缺少参数")
+	}
+	err := controller.linkService.addLink(param)
+	if err != nil {
+		return message(FAIL, err.Error())
+	}
+	return message(SUCCESS, SUCCESS_MESSAGE)
+}
+
+func (controller LinkController) deleteLink(ctx *HttpContext) ResponseEntity {
+	param := DeleteLinkParam{}
+	paramStr := interface{}(&param)
+	ctx.getParam(&paramStr)
+	if param.Id == 0 {
+		return message(INVALID_PARAM, "缺少参数")
+	}
+	err := controller.linkService.deleteLink(param.Id)
+	if err != nil {
+		return message(FAIL, err.Error())
+	}
+	return message(SUCCESS, SUCCESS_MESSAGE)
+}
+
+func (controller LinkController) updateLink(ctx *HttpContext) ResponseEntity {
+	param := UpdateLinkParam{}
+	paramStr := interface{}(&param)
+	ctx.getParam(&paramStr)
+	if param.Id == 0 {
+		return message(INVALID_PARAM, "缺少参数")
+	}
+	err := controller.linkService.updateLink(param)
+	if err != nil {
+		return message(FAIL, err.Error())
+	}
+	return message(SUCCESS, SUCCESS_MESSAGE)
+}
+
+type IntroductionController struct {
+	service IntroductionService
+}
+
+func (controller IntroductionController) updateIntroduction(ctx *HttpContext) ResponseEntity {
+	param := UpdateIntroductionParam{}
+	paramStr := interface{}(&param)
+	ctx.getParam(&paramStr)
+	controller.service.updateIntroduction(param.Content)
+	return message(SUCCESS, SUCCESS_MESSAGE)
+}
+
+func (controller IntroductionController) getIntroduction(ctx *HttpContext) ResponseEntity {
+	content := controller.service.getIntroduction()
+	if len(content) == 0 {
+		content = "敬请期待"
+	}
+	result := map[string]string{"introduction": content}
+
+	return success(SUCCESS_MESSAGE, result)
+}
+
+func (controller IntroductionController) getImageList(ctx *HttpContext) ResponseEntity {
+	imageList, err := controller.service.getImageList()
+	if err != nil {
+		return message(FAIL, err.Error())
+	}
+	return success(SUCCESS_MESSAGE, imageList)
+}
+
+type ToolsController struct {
+	service ToolsService
+}
+
+func (controller ToolsController) getToolsList(ctx *HttpContext) ResponseEntity {
+	toolsList, err := controller.service.getToolsList()
+	if err != nil {
+		return message(FAIL, err.Error())
+	}
+	return success(SUCCESS_MESSAGE, toolsList)
+}
+
+func (controller ToolsController) downloadTools(ctx *HttpContext) ResponseEntity {
+	param := DownloadToolsDTO{}
+	paramStr := interface{}(&param)
+	ctx.getParam(&paramStr)
+	vo, err := controller.service.downloadTools(param.Id)
+	if err != nil {
+		return message(FAIL, FAIL_MESSAGE)
+	}
+	return success(SUCCESS, vo)
 }

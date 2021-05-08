@@ -54,11 +54,25 @@ func buildRoutine() {
 	router = make(map[string]func(*HttpContext) ResponseEntity)
 	userController := UserController{}
 	linkController := LinkController{}
+	introductionController := IntroductionController{}
+	toolsController := ToolsController{}
 	router["/login"] = userController.login
 	router["/api/getUserInformation"] = userController.getUserInformation
 	router["/api/validateUser"] = userController.validateUser
+	router["/manager/addUser"] = userController.createUser
+	router["/manager/getUserList"] = userController.getUserInformationList
+	router["/manager/updateUser"] = userController.updateUser
+	router["/manager/validateUser"] = userController.validateUser
+	router["/manager/deleteUser"] = userController.deleteUser
 	router["/api/getAllLinkList"] = linkController.getAllLinkList
-	router["/manager/createUser"] = userController.createUser
+	router["/manager/addLink"] = linkController.addLink
+	router["/manager/deleteLink"] = linkController.deleteLink
+	router["/manager/updateLink"] = linkController.updateLink
+	router["/api/getIntroduction"] = introductionController.getIntroduction
+	router["/manager/updateIntroduction"] = introductionController.updateIntroduction
+	router["/manager/getImageList"] = introductionController.getImageList
+	router["/api/getToolsList"] = toolsController.getToolsList
+	router["/api/downloadTools"] = toolsController.downloadTools
 	for key, _ := range router {
 		log.Printf("Mapped url %s\n", key)
 	}

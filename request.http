@@ -2,7 +2,7 @@ POST {{baseUrl}}/login
 Content-Type: application/json
 
 {
-  "username": "min",
+  "username": "Minnan",
   "password": "minnan35"
 }
 
@@ -13,12 +13,12 @@ POST {{baseUrl}}/login
 Content-Type: application/json
 
 {
-  "username":"aaa",
+  "username": "aaa",
   "password": "min107"
 }
 
 ###
-POST {{baseUrl}}/api/getAllLinkList
+POST {{baseUrl}}/manager/getImageList
 Content-Type: application/json
 Authorization: {{admin_token}}
 
@@ -27,10 +27,33 @@ Authorization: {{admin_token}}
 ###
 POST {{baseUrl}}/manager/createUser
 Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJTdWJqZWN0IjoiTWlubmFuIiwiSWQiOjEsIkV4cGlyZXNBdCI6MTYyMDUzMzAzOTczMCwiSXNzdWVkQXQiOjE2MjA0NDY2Mzk3MzB9.vIZ4rPB8XCPGMaArre8b4HPRrMpiMPFWjKKu_WSpWkmBwCxqUN1uJ9OMpTCv1o0WZmL-ASaSlFjBJ8STtesaqw
+
+{
+  "username": "chf",
+  "password": "chf123",
+  "nickName": "chf"
+}
+
+###
+POST {{baseUrl}}/api/getIntroduction
+Content-Type: application/json
+Authorization: {{admin_token}}
+
+{}
+
+###
+POST {{baseUrl}}/api/getImageList
+Content-Type: application/json
+Authorization: {{admin_token}}
+
+{}
+
+###
+POST {{baseUrl}}/api/downloadTools
+Content-Type: application/json
 Authorization: {{admin_token}}
 
 {
-  "username": "aaa",
-  "password": "min107",
-  "nickName": "123"
+  "id":1
 }
