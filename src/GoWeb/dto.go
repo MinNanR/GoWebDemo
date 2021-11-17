@@ -1,5 +1,7 @@
 package main
 
+import "mime/multipart"
+
 type LoginPram struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
@@ -45,5 +47,27 @@ type UpdateIntroductionParam struct {
 }
 
 type DownloadToolsDTO struct {
+	Id int `json:"id"`
+}
+
+type GetLinkDTO struct {
+	Type string `json:"type"`
+}
+
+type SubscribeDTO struct {
+	Type string `json:"type"`
+	Sign string `json:"sign"`
+}
+
+type CreateSignDTO struct {
+	Type   string `json:"type"`
+	UserId int
+}
+
+type AddImageDTO struct {
+	Image *multipart.FileHeader
+}
+
+type DeleteImageDTO struct {
 	Id int `json:"id"`
 }

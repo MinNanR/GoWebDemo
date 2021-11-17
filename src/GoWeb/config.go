@@ -37,7 +37,7 @@ func createFilterChain() *Filter {
 	return chain
 }
 
-var authorityPath = []string{"/login"}
+var authorityPath = []string{"/login", "/subscribe"}
 
 type Redis struct {
 	Host     string

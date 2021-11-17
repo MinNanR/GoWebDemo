@@ -1,9 +1,13 @@
 package main
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
+	"log"
+	"strings"
 	"time"
 )
 
@@ -27,6 +31,14 @@ func (service UserService) loadUserByUserName(username string) (AuthUser, error)
 	user, err := service.db.SelectUserByUsername(username)
 	if err != nil {
 		return AuthUser{}, LoginError{message: "用户不存在"}
+	}
+	return user, nil
+}
+
+func (service UserService) loadUserBySign(sign string) (AuthUser, error) {
+	user, err := service.db.SelectUserBySign(sign)
+	if err != nil {
+		return AuthUser{}, err
 	}
 	return user, nil
 }
@@ -102,6 +114,26 @@ func (service LinkService) updateLink(param UpdateLinkParam) error {
 	return service.db.updateLink(link)
 }
 
+func (service LinkService) getSubscribe(param GetLinkDTO) (string, error) {
+	if param.Type == "" {
+		return "", nil
+	}
+	linkList, err := service.db.SelectAllLink()
+	if err != nil {
+		return "", err
+	}
+	urlList := make([]string, 0)
+	targetType := strings.ToLower(param.Type)
+	for _, information := range linkList {
+		if strings.HasPrefix(information.Link, targetType) {
+			urlList = append(urlList, information.Link)
+		}
+	}
+	result := strings.Join(urlList, "\n")
+	resultBase64 := base64.StdEncoding.EncodeToString([]byte(result))
+	return resultBase64, nil
+}
+
 type IntroductionService struct {
 	db ImageDB
 }
@@ -120,7 +152,7 @@ func (service IntroductionService) getImageList() ([]Image, error) {
 		return nil, err
 	}
 	for index, _ := range imageList {
-		imageList[index].Url = aliyunConfig.baseUrl + imageList[index].Url
+		imageList[index].Url = aliyunConfig.baseUrl + "/" + imageList[index].Url
 	}
 	return imageList, nil
 }
@@ -144,4 +176,79 @@ func (service ToolsService) downloadTools(id int) (DownloadToolsVO, error) {
 	}
 	return vo, nil
 
+}
+
+type SignService struct {
+	db SubscribeSignDB
+}
+
+func (service SignService) createSubscribeSign(dto CreateSignDTO) (string, error) {
+	uuidObj, err := uuid.NewV4()
+	if err != nil {
+		return "", err
+	}
+	uuidString := strings.ReplaceAll(uuidObj.String(), "-", "")
+	subscribeSign := SubscribeSign{UserId: dto.UserId, Sign: uuidString}
+	err = service.db.createSubscribeSign(subscribeSign)
+	if err != nil {
+		return "", err
+	}
+	url := fmt.Sprintf("http://minnan.site:8989/subscribe?type=%s&sign=%s", dto.Type, uuidString)
+	return url, nil
+}
+
+func (service IntroductionService) addImage(dto AddImageDTO) ResponseInterface {
+	image := dto.Image
+	originalFileName := image.Filename
+	fileExtensionArray := strings.Split(originalFileName, ".")
+	fileExtension := strings.ToLower(fileExtensionArray[len(fileExtensionArray)-1])
+	uuidObj, _ := uuid.NewV4()
+	uuidString := strings.ReplaceAll(uuidObj.String(), "-", "")
+	ossKey := fmt.Sprintf("%s.%s", uuidString, fileExtension)
+	imageEntity := Image{Url: ossKey}
+	tx, err := service.db.insert(imageEntity)
+	if err != nil {
+		return fail("添加图片失败", "")
+	}
+	fileHandle, err := image.Open()
+	if err != nil {
+		tx.Rollback()
+		return fail(err.Error(), nil)
+	}
+	bucket, err := ossClient.Bucket(aliyunConfig.bucketName)
+	if err != nil {
+		tx.Rollback()
+		return fail(err.Error(), nil)
+	}
+	err = bucket.PutObject(ossKey, fileHandle)
+	if err != nil {
+		tx.Rollback()
+		return fail("插入图片失败", nil)
+	}
+	tx.Commit()
+	log.Println("添加图片:", ossKey)
+	return success("插入图片成功", "")
+}
+
+func (service IntroductionService) deleteImage(dto DeleteImageDTO) error {
+	imageEntity, err := service.db.selectById(dto.Id)
+	if err != nil || imageEntity.Id == 0 {
+		return errors.New("图片不存在")
+	}
+	tx, err := service.db.delete(dto.Id)
+	if err != nil {
+		return errors.New("删除图片失败")
+	}
+	bucket, err := ossClient.Bucket(aliyunConfig.bucketName)
+	if err != nil {
+		tx.Rollback()
+		return errors.New("删除图片失败")
+	}
+	err = bucket.DeleteObject(imageEntity.Url)
+	if err != nil {
+		tx.Rollback()
+		return errors.New("删除图片失败")
+	}
+	tx.Commit()
+	return nil
 }

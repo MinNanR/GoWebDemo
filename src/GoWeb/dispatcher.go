@@ -6,14 +6,14 @@ import (
 )
 
 type HttpContext struct {
-	url            string                            //请求地址
-	paramByte      []byte                            //参数的byte数组，可以来自地址参数（get方法），表单或body（Post方法），具体由请求头决定
-	Principal      AuthUser                          //当前操作的用户
-	request        *http.Request                     //request域
-	response       http.ResponseWriter               //response域
-	targetFunction func(*HttpContext) ResponseEntity //接口执行的函数
-	isAuthorized   bool                              //是否已通过权限校验
-	responseEntity ResponseEntity                    //返回值
+	url            string                               //请求地址
+	paramByte      []byte                               //参数的byte数组，可以来自地址参数（get方法），表单或body（Post方法），具体由请求头决定
+	Principal      AuthUser                             //当前操作的用户
+	request        *http.Request                        //request域
+	response       http.ResponseWriter                  //response域
+	targetFunction func(*HttpContext) ResponseInterface //接口执行的函数
+	isAuthorized   bool                                 //是否已通过权限校验
+	responseEntity ResponseInterface                    //返回值
 }
 
 func (context HttpContext) getParam(param *interface{}) {
@@ -29,7 +29,7 @@ func dispatch(response http.ResponseWriter, request *http.Request) {
 	response.Header().Set("Access-Control-Allow-Origin", "*")                                                                                   //允许访问所有域
 	response.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization") //header的类型
 	response.Header().Set("Access-Control-Allow-Methods", "POST,GET,OPTIONS")
-	url := request.RequestURI
+	url := request.URL.Path
 	if request.Method == http.MethodOptions {
 		return
 	}

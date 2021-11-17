@@ -1,5 +1,7 @@
+###
 POST {{baseUrl}}/login
 Content-Type: application/json
+Accept: application/json
 
 {
   "username": "Minnan",
@@ -11,11 +13,14 @@ Content-Type: application/json
 ###
 POST {{baseUrl}}/login
 Content-Type: application/json
+Accept: application/json
 
 {
-  "username": "aaa",
-  "password": "min107"
+  "username": "min",
+  "password": "minnan35"
 }
+
+> {% client.global.set("user_token", "Bearer " + response.body.data.jwtToken); %}
 
 ###
 POST {{baseUrl}}/manager/getImageList
@@ -50,10 +55,34 @@ Authorization: {{admin_token}}
 {}
 
 ###
-POST {{baseUrl}}/api/downloadTools
+GET {{baseUrl}}/api/downloadTools
 Content-Type: application/json
-Authorization: {{admin_token}}
+#Authorization: {{admin_token}}
 
 {
   "id":1
 }
+
+###
+GET {{baseUrl}}/subscribe?type=VMESS&sign=726c57772a07433bab7c7fff95fccad2
+
+###
+POST {{baseUrl}}/api/generateSign
+Content-Type: application/json
+Accept: application/json
+Authorization: {{user_token}}
+
+{
+  "type": "VMESS"
+}
+
+###
+POST {{baseUrl}}/manager/addImage
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+Authorization: {{admin_token}}
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"
+
+< C:\Users\Administrator\Pictures\Saved Pictures\introduction\m7.jpg
+--WebAppBoundary--

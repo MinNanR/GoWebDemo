@@ -7,9 +7,10 @@ import (
 
 type UserController struct {
 	UserService UserService
+	SignService SignService
 }
 
-func (controller UserController) login(ctx *HttpContext) ResponseEntity {
+func (controller UserController) login(ctx *HttpContext) ResponseInterface {
 	param := LoginPram{}
 	paramPtr := interface{}(&param)
 	ctx.getParam(&paramPtr)
@@ -47,7 +48,7 @@ func (controller UserController) login(ctx *HttpContext) ResponseEntity {
 	return responseEntity
 }
 
-func (controller UserController) validateUser(ctx *HttpContext) ResponseEntity {
+func (controller UserController) validateUser(ctx *HttpContext) ResponseInterface {
 	user := ctx.Principal
 	var param ValidateUserParam
 	paramPtr := interface{}(&param)
@@ -58,14 +59,14 @@ func (controller UserController) validateUser(ctx *HttpContext) ResponseEntity {
 	return responseEntity
 }
 
-func (controller UserController) getUserInformation(ctx *HttpContext) ResponseEntity {
+func (controller UserController) getUserInformation(ctx *HttpContext) ResponseInterface {
 	user := ctx.Principal
 	user.Password = ""
 	responseEntity := data(SUCCESS, SUCCESS_MESSAGE, user)
 	return responseEntity
 }
 
-func (controller UserController) getUserInformationList(ctx *HttpContext) ResponseEntity {
+func (controller UserController) getUserInformationList(ctx *HttpContext) ResponseInterface {
 	userList, err := controller.UserService.getUserInformationList()
 	if err != nil {
 		return message(FAIL, err.Error())
@@ -73,7 +74,7 @@ func (controller UserController) getUserInformationList(ctx *HttpContext) Respon
 	return data(SUCCESS, SUCCESS_MESSAGE, userList)
 }
 
-func (controller UserController) createUser(ctx *HttpContext) ResponseEntity {
+func (controller UserController) createUser(ctx *HttpContext) ResponseInterface {
 	param := AddUserParam{}
 	paramPtr := interface{}(&param)
 	ctx.getParam(&paramPtr)
@@ -84,7 +85,7 @@ func (controller UserController) createUser(ctx *HttpContext) ResponseEntity {
 	return message(SUCCESS, SUCCESS_MESSAGE)
 }
 
-func (controller UserController) updateUser(ctx *HttpContext) ResponseEntity {
+func (controller UserController) updateUser(ctx *HttpContext) ResponseInterface {
 	param := UpdateUserParam{}
 	paramStr := interface{}(&param)
 	ctx.getParam(&paramStr)
@@ -95,7 +96,7 @@ func (controller UserController) updateUser(ctx *HttpContext) ResponseEntity {
 	return message(SUCCESS, SUCCESS_MESSAGE)
 }
 
-func (controller UserController) deleteUser(ctx *HttpContext) ResponseEntity {
+func (controller UserController) deleteUser(ctx *HttpContext) ResponseInterface {
 	param := DeleteUserParam{}
 	paramStr := interface{}(&param)
 	ctx.getParam(&paramStr)
@@ -110,7 +111,7 @@ type LinkController struct {
 	linkService LinkService
 }
 
-func (controller LinkController) getAllLinkList(context *HttpContext) ResponseEntity {
+func (controller LinkController) getAllLinkList(context *HttpContext) ResponseInterface {
 	linkList, err := controller.linkService.getLinkList()
 	if err != nil {
 		return message(FAIL, "查询失败")
@@ -118,7 +119,7 @@ func (controller LinkController) getAllLinkList(context *HttpContext) ResponseEn
 	return success(SUCCESS_MESSAGE, linkList)
 }
 
-func (controller LinkController) addLink(ctx *HttpContext) ResponseEntity {
+func (controller LinkController) addLink(ctx *HttpContext) ResponseInterface {
 	param := AddLinkParam{}
 	paramStr := interface{}(&param)
 	ctx.getParam(&paramStr)
@@ -132,7 +133,7 @@ func (controller LinkController) addLink(ctx *HttpContext) ResponseEntity {
 	return message(SUCCESS, SUCCESS_MESSAGE)
 }
 
-func (controller LinkController) deleteLink(ctx *HttpContext) ResponseEntity {
+func (controller LinkController) deleteLink(ctx *HttpContext) ResponseInterface {
 	param := DeleteLinkParam{}
 	paramStr := interface{}(&param)
 	ctx.getParam(&paramStr)
@@ -146,7 +147,7 @@ func (controller LinkController) deleteLink(ctx *HttpContext) ResponseEntity {
 	return message(SUCCESS, SUCCESS_MESSAGE)
 }
 
-func (controller LinkController) updateLink(ctx *HttpContext) ResponseEntity {
+func (controller LinkController) updateLink(ctx *HttpContext) ResponseInterface {
 	param := UpdateLinkParam{}
 	paramStr := interface{}(&param)
 	ctx.getParam(&paramStr)
@@ -160,11 +161,35 @@ func (controller LinkController) updateLink(ctx *HttpContext) ResponseEntity {
 	return message(SUCCESS, SUCCESS_MESSAGE)
 }
 
+func (controller UserController) generateSign(ctx *HttpContext) ResponseInterface {
+	user := ctx.Principal
+	param := CreateSignDTO{}
+	paramStr := interface{}(&param)
+	ctx.getParam(&paramStr)
+	param.UserId = user.Id
+	url, err := controller.SignService.createSubscribeSign(param)
+	if err != nil {
+		return message(FAIL, err.Error())
+	}
+	return success(SUCCESS_MESSAGE, url)
+}
+
+func (controller LinkController) getSubscribe(ctx *HttpContext) ResponseInterface {
+	param := GetLinkDTO{}
+	paramStr := interface{}(&param)
+	ctx.getParam(&paramStr)
+	subscribe, err := controller.linkService.getSubscribe(param)
+	if err != nil {
+		return PlainResponse{Data: ""}
+	}
+	return PlainResponse{Data: subscribe}
+}
+
 type IntroductionController struct {
 	service IntroductionService
 }
 
-func (controller IntroductionController) updateIntroduction(ctx *HttpContext) ResponseEntity {
+func (controller IntroductionController) updateIntroduction(ctx *HttpContext) ResponseInterface {
 	param := UpdateIntroductionParam{}
 	paramStr := interface{}(&param)
 	ctx.getParam(&paramStr)
@@ -172,7 +197,7 @@ func (controller IntroductionController) updateIntroduction(ctx *HttpContext) Re
 	return message(SUCCESS, SUCCESS_MESSAGE)
 }
 
-func (controller IntroductionController) getIntroduction(ctx *HttpContext) ResponseEntity {
+func (controller IntroductionController) getIntroduction(ctx *HttpContext) ResponseInterface {
 	content := controller.service.getIntroduction()
 	if len(content) == 0 {
 		content = "敬请期待"
@@ -182,7 +207,7 @@ func (controller IntroductionController) getIntroduction(ctx *HttpContext) Respo
 	return success(SUCCESS_MESSAGE, result)
 }
 
-func (controller IntroductionController) getImageList(ctx *HttpContext) ResponseEntity {
+func (controller IntroductionController) getImageList(ctx *HttpContext) ResponseInterface {
 	imageList, err := controller.service.getImageList()
 	if err != nil {
 		return message(FAIL, err.Error())
@@ -194,7 +219,7 @@ type ToolsController struct {
 	service ToolsService
 }
 
-func (controller ToolsController) getToolsList(ctx *HttpContext) ResponseEntity {
+func (controller ToolsController) getToolsList(ctx *HttpContext) ResponseInterface {
 	toolsList, err := controller.service.getToolsList()
 	if err != nil {
 		return message(FAIL, err.Error())
@@ -202,7 +227,7 @@ func (controller ToolsController) getToolsList(ctx *HttpContext) ResponseEntity 
 	return success(SUCCESS_MESSAGE, toolsList)
 }
 
-func (controller ToolsController) downloadTools(ctx *HttpContext) ResponseEntity {
+func (controller ToolsController) downloadTools(ctx *HttpContext) ResponseInterface {
 	param := DownloadToolsDTO{}
 	paramStr := interface{}(&param)
 	ctx.getParam(&paramStr)
@@ -211,4 +236,28 @@ func (controller ToolsController) downloadTools(ctx *HttpContext) ResponseEntity
 		return message(FAIL, FAIL_MESSAGE)
 	}
 	return success(SUCCESS, vo)
+}
+
+type FileController struct {
+	toolsService        ToolsService
+	introductionService IntroductionService
+}
+
+func (controller FileController) insertImage(ctx *HttpContext) ResponseInterface {
+	request := ctx.request
+	fileForm := request.MultipartForm.File
+	imageFile := fileForm["image"][0]
+	dto := AddImageDTO{Image: imageFile}
+	return controller.introductionService.addImage(dto)
+}
+
+func (controller IntroductionController) deleteImage(ctx *HttpContext) ResponseInterface {
+	param := DeleteImageDTO{}
+	paramStr := interface{}(&param)
+	ctx.getParam(&paramStr)
+	err := controller.service.deleteImage(param)
+	if err != nil {
+		return fail(err.Error(), "")
+	}
+	return success(SUCCESS_MESSAGE, "")
 }

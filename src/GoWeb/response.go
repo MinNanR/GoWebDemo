@@ -6,6 +6,10 @@ import (
 	"io"
 )
 
+type ResponseInterface interface {
+	export(writer io.Writer)
+}
+
 type ResponseEntity struct {
 	Code    string      `json:"code"`
 	Message string      `json:"message"`
@@ -72,4 +76,12 @@ func defaultData(data interface{}) ResponseEntity {
 func (entity ResponseEntity) export(writer io.Writer) {
 	jsonObj, _ := json.Marshal(entity)
 	fmt.Fprintf(writer, string(jsonObj))
+}
+
+type PlainResponse struct {
+	Data string `json:"data"`
+}
+
+func (entity PlainResponse) export(writer io.Writer) {
+	fmt.Fprintf(writer, entity.Data)
 }

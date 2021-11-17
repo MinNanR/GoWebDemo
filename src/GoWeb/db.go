@@ -33,6 +33,18 @@ func (userDb UserDB) SelectUserByUsername(username string) (AuthUser, error) {
 	return authUser, nil
 }
 
+func (userDb UserDB) SelectUserBySign(sign string) (AuthUser, error) {
+	var authUser AuthUser
+	err := conn.QueryRow("select t2.id id, t2.username username, t2.password, t2.nick_name nickName, "+
+		"t2.role role from subscribe_sign t1 left join user t2 on t1.user_id = t2.id where t1.sign = ?",
+		sign).Scan(&authUser.Id, &authUser.Username,
+		&authUser.Password, &authUser.NickName, &authUser.Role)
+	if err != nil {
+		return authUser, err
+	}
+	return authUser, nil
+}
+
 func (userDb UserDB) insert(user AuthUser) error {
 	stmt, err := conn.Prepare("insert into user(username, password, nick_name, role) value (?, ?, ?, ?)")
 	if err != nil {
@@ -155,6 +167,41 @@ func (imageDb ImageDB) selectList() ([]Image, error) {
 	return imageList, nil
 }
 
+func (imageDb ImageDB) insert(image Image) (*sql.Tx, error) {
+	tx, err := conn.Begin()
+	if err != nil {
+		return nil, errors.New("插入图片失败")
+	}
+	stmt, err := tx.Prepare("insert into image (url) value (?)")
+	if err != nil {
+		return nil, errors.New("插入图片失败")
+	}
+	_, err = stmt.Exec(image.Url)
+	if err != nil {
+		return nil, errors.New("插入图片失败")
+	}
+	return tx, nil
+}
+
+func (imageDb ImageDB) selectById(id int) (Image, error) {
+	image := Image{}
+	err := conn.QueryRow("select id ,url from image where id = ? ", id).Scan(&image.Id, &image.Url)
+	return image, err
+}
+
+func (imageDb ImageDB) delete(id int) (*sql.Tx, error) {
+	tx, err := conn.Begin()
+	if err != nil {
+		return nil, err
+	}
+	stmt, err := tx.Prepare("delete from image where id = ?")
+	if err != nil {
+		return nil, err
+	}
+	_, err = stmt.Exec(id)
+	return tx, err
+}
+
 type ToolsDB struct {
 }
 
@@ -180,4 +227,16 @@ func (ToolsDB) selectById(id int) (Tools, error) {
 		return tools, err
 	}
 	return tools, nil
+}
+
+type SubscribeSignDB struct {
+}
+
+func (db SubscribeSignDB) createSubscribeSign(sign SubscribeSign) error {
+	stmt, err := conn.Prepare("insert into subscribe_sign (user_id, sign) value (?, ?)")
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(sign.UserId, sign.Sign)
+	return err
 }

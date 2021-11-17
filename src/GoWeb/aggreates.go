@@ -44,3 +44,9 @@ type Tools struct {
 	Size       int64    `json:"size"`
 	UpdateTime JsonTime `json:"updateTime"`
 }
+
+type SubscribeSign struct {
+	Id     int    `json:"id"`
+	UserId int    `json:"userId"`
+	Sign   string `json:"sign"`
+}

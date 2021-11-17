@@ -44,21 +44,35 @@ func getBody(request *http.Request) []byte {
 	return bodyBuffer
 }
 
-var router map[string]func(*HttpContext) ResponseEntity
+var router map[string]func(*HttpContext) ResponseInterface
+var authUrls map[string]*AuthUrls
 var re, _ = regexp.Compile(`\s`)
+
+type AuthUrls struct {
+	Urls []string
+}
+
+func (auth AuthUrls) isAuthorized(targetUrl string) bool {
+	for _, url := range auth.Urls {
+		if url == targetUrl {
+			return true
+		}
+	}
+	return false
+}
 
 /*
 构建路由
 */
 func buildRoutine() {
-	router = make(map[string]func(*HttpContext) ResponseEntity)
+	router = make(map[string]func(*HttpContext) ResponseInterface)
 	userController := UserController{}
 	linkController := LinkController{}
 	introductionController := IntroductionController{}
 	toolsController := ToolsController{}
+	fileController := FileController{}
 	router["/login"] = userController.login
 	router["/api/getUserInformation"] = userController.getUserInformation
-	router["/api/validateUser"] = userController.validateUser
 	router["/manager/addUser"] = userController.createUser
 	router["/manager/getUserList"] = userController.getUserInformationList
 	router["/manager/updateUser"] = userController.updateUser
@@ -73,15 +87,33 @@ func buildRoutine() {
 	router["/manager/getImageList"] = introductionController.getImageList
 	router["/api/getToolsList"] = toolsController.getToolsList
 	router["/api/downloadTools"] = toolsController.downloadTools
+	router["/subscribe"] = linkController.getSubscribe
+	router["/api/generateSign"] = userController.generateSign
+	router["/manager/addImage"] = fileController.insertImage
+	router["/manager/deleteImage"] = introductionController.deleteImage
 	for key, _ := range router {
 		log.Printf("Mapped url %s\n", key)
 	}
+
+	adminUrl := []string{"/api/getUserInformation", "/api/getAllLinkList", "/api/getIntroduction",
+		"/api/getToolsList", "/api/downloadTools", "/manager/addUser", "/manager/getUserList", "/manager/updateUser",
+		"/manager/validateUser", "/manager/deleteUser", "/manager/addLink", "/manager/deleteLink",
+		"/manager/updateLink", "/manager/updateIntroduction", "/manager/getImageList", "/subscribe",
+		"/api/generateSign", "/manager/addImage", "/manager/deleteImage"}
+	userUrl := []string{"/api/getUserInformation", "/api/getAllLinkList", "/api/getIntroduction",
+		"/api/getToolsList", "/api/downloadTools", "/subscribe", "/api/generateSign"}
+
+	authUrls = make(map[string]*AuthUrls)
+	authUrls["ADMIN"] = &AuthUrls{Urls: adminUrl}
+	authUrls["USER"] = &AuthUrls{Urls: userUrl}
+
 }
 
 func buildFilter() {
 	filterMethodList = append(filterMethodList, UrlFilter)
 	filterMethodList = append(filterMethodList, ParamFilter)
 	filterMethodList = append(filterMethodList, UserFilter)
+	filterMethodList = append(filterMethodList, SubscribeFilter)
 	filterMethodList = append(filterMethodList, AuthorityFilter)
 	filterMethodList = append(filterMethodList, LogFilter)
 	filterMethodList = append(filterMethodList, ResponseFilter)
@@ -110,16 +142,25 @@ func UrlFilter(ctx *HttpContext, filterChain *Filter) {
 */
 func ParamFilter(ctx *HttpContext, filterChain *Filter) {
 	request := ctx.request
-	requestMethod := request.Method
+	requestMethod := strings.ToUpper(request.Method)
 	contentType := request.Header.Get("Content-Type")
-	if strings.ToUpper(requestMethod) == "POST" && contentType == "application/json" {
+	if requestMethod == "POST" && contentType == "application/json" {
 		ctx.paramByte = getBody(request)
-	} else {
+	} else if requestMethod == "POST" && contentType == "application/x-www-form-urlencoded" {
 		err := request.ParseForm()
 		if err != nil {
 			form := request.Form
 			ctx.paramByte, _ = json.Marshal(form)
 		}
+	} else if requestMethod == "POST" && strings.Contains(contentType, "multipart/form-data") {
+		request.ParseMultipartForm(64 << 20)
+	} else if requestMethod == "GET" {
+		queryList := request.URL.Query()
+		query := make(map[string]string)
+		for k, v := range queryList {
+			query[k] = v[0]
+		}
+		ctx.paramByte, _ = json.Marshal(query)
 	}
 	filterChain.doFilter(ctx)
 }
@@ -137,27 +178,44 @@ func isAuthorityPath(url string) bool {
 用户解析过滤器
 */
 func UserFilter(ctx *HttpContext, filterChain *Filter) {
-	isAuthorityPath := isAuthorityPath(ctx.url)
-	if !isAuthorityPath {
-		user, err := parseUser(ctx.request)
-		if err != nil {
-			response := ctx.response
-			responseEntity := message(INVALID_USER, err.Error())
-			responseEntity.export(response)
-			return
+	if !ctx.isAuthorized {
+		isAuthorityPath := isAuthorityPath(ctx.url)
+		if !isAuthorityPath {
+			user, err := parseUser(ctx.request)
+			if err != nil {
+				//response := ctx.response
+				//responseEntity := message(INVALID_USER, err.Error())
+				//responseEntity.export(response)
+				ctx.response.WriteHeader(401)
+				return
+			} else {
+				ctx.Principal = user
+			}
 		} else {
-			ctx.Principal = user
+			ctx.isAuthorized = true
 		}
+		filterChain.doFilter(ctx)
 	} else {
-		ctx.isAuthorized = true
+		filterChain.doFilter(ctx)
 	}
-	filterChain.doFilter(ctx)
 }
 
 /*
 权限校验，后续补充
 */
 func AuthorityFilter(ctx *HttpContext, filterChain *Filter) {
+	if !ctx.isAuthorized {
+		isAuthorityPath := isAuthorityPath(ctx.url)
+		if !isAuthorityPath {
+			principal := ctx.Principal
+			authorizedUrls := authUrls[principal.Role]
+			isAuthorized := authorizedUrls.isAuthorized(ctx.url)
+			if !isAuthorized {
+				ctx.response.WriteHeader(401)
+				return
+			}
+		}
+	}
 	filterChain.doFilter(ctx)
 }
 
@@ -183,12 +241,27 @@ func ResponseFilter(ctx *HttpContext, filterChain *Filter) {
 	accept := ctx.request.Header.Get("Accept")
 	responseEntity := ctx.responseEntity
 	response := ctx.response
-	if len(accept) == 0 {
+	if accept == "application/json" {
 		response.Header().Add("Content-Type", "application/json")
-	} else {
+	} else if len(accept) > 0 {
 		response.Header().Add("Content-Type", accept)
+	} else {
+		response.Header().Add("Content-type", "application/text")
 	}
 	responseEntity.export(response)
+}
+
+func SubscribeFilter(ctx *HttpContext, filterChain *Filter) {
+	if ctx.url == "/subscribe" {
+		user, err := parseSubscribeUser(ctx)
+		if err != nil {
+			ctx.response.WriteHeader(401)
+			return
+		}
+		ctx.Principal = user
+		ctx.isAuthorized = true
+	}
+	filterChain.doFilter(ctx)
 }
 
 /*
@@ -207,6 +280,18 @@ func parseUser(request *http.Request) (AuthUser, error) {
 		return AuthUser{}, err
 	}
 	user, err := service.loadUserByUserName(claims.Subject)
+	if err != nil {
+		return AuthUser{}, err
+	}
+	return user, nil
+}
+
+func parseSubscribeUser(ctx *HttpContext) (AuthUser, error) {
+	param := &SubscribeDTO{}
+	paramStr := interface{}(&param)
+	ctx.getParam(&paramStr)
+	service := UserService{}
+	user, err := service.loadUserBySign(param.Sign)
 	if err != nil {
 		return AuthUser{}, err
 	}
